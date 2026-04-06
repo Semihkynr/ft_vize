@@ -22,38 +22,41 @@ Bu çalışmada, web uygulamalarındaki en kritik ve yaygın zafiyetlerden biri 
   <script>alert('Sistem Hacklendi! Çerezleriniz çalındı: ' + document.cookie);</script>
 Sonuç: Tarayıcı, gelen veriyi bir yorum metni olarak değil, doğrudan çalıştırılabilir bir betik (script) olarak algılamış ve kodu execute etmiştir. Sistemin XSS saldırılarına karşı tamamen savunmasız olduğu ispatlanmıştır.
 
-🛡️ AŞAMA 2: Frontend Katmanı (Input Sanitization)
+## 🛡️ AŞAMA 2: Frontend Katmanı (Input Sanitization)
 Saldırıyı engellemek için kurulan ilk savunma hattı tarayıcı (Client-side) seviyesindedir.
 
 Teknik Uygulama (Girdi Temizleme): Kullanıcı "Gönder" butonuna bastığında olay Javascript ile yakalanır (e.preventDefault()). Kullanıcının girdiği ham veri sanal bir HTML elementi olan div.innerText içerisine atanır. Bu DOM özelliği, içerikteki zararlı HTML etiketlerini otomatik olarak nötralize ederek düz metne (plain text) çevirir. Temizlenen veri sonrasında fetch API ile sunucuya iletilir.
 
 Mimari Uyarı (Bypass Riski): Frontend koruması faydalı bir filtre olsa da, bir saldırgan Postman, cURL veya Burp Suite gibi araçlarla tarayıcıyı tamamen es geçerek doğrudan Backend'e zararlı istek (Request) atabilir. Bu nedenle Frontend güvenliği tek başına yetersizdir.
 
-🧱 AŞAMA 3: Backend Katmanı (Entity Escaping - Altın Standart)
+## 🧱 AŞAMA 3: Backend Katmanı (Entity Escaping - Altın Standart)
+
 Frontend'in atlatılma riskine karşılık, sistemin asıl kurşun geçirmez zırhı Sunucu (Server-side) seviyesinde inşa edilmiştir.
 
-Teknik Uygulama (Karakter Dönüştürme): İstemciden Backend'e ulaşan veri, ekrana basılmadan veya veritabanına yazılmadan hemen önce escapeHtml fonksiyonu ile işlenir. Bu fonksiyon, Regex (Düzenli İfadeler) kullanarak HTML parser'ı manipüle edebilecek kritik karakterleri zararsız "HTML Entity" karşılıklarına dönüştürür.
+### 🔧 Teknik Uygulama (Karakter Dönüştürme)
 
-Dönüşüm Tablosu:
+İstemciden Backend'e ulaşan veri, ekrana basılmadan veya veritabanına yazılmadan hemen önce `escapeHtml` fonksiyonu ile işlenir. Bu fonksiyon, Regex (Düzenli İfadeler) kullanarak HTML parser'ı manipüle edebilecek kritik karakterleri zararsız **HTML Entity** karşılıklarına dönüştürür.
 
-< işareti &lt; formatına,
+### 🔄 Dönüşüm Tablosu
 
-> işareti &gt; formatına,
+- `<` işareti → `&lt;`
+- `>` işareti → `&gt;`
+- `&` işareti → `&amp;`
+- `"` işareti → `&quot;`
+- `'` işareti → `&#039;`
 
-&, ", ve ' gibi tetikleyici karakterler ilgili güvenli kodlara dönüştürülmüştür.
+### 🛡️ Geliştirilen Güvenlik Yaması (Remediation Code)
 
-Geliştirilen Güvenlik Yaması (Remediation Code):
-
-JavaScript
-
+```javascript
 function escapeHtml(unsafeString) {
     if (!unsafeString) return "";
+
     return unsafeString
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // Güvenli Endpoint
