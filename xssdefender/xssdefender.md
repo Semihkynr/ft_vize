@@ -66,6 +66,6 @@ app.post('/submit', (req, res) => {
     // ...
 });
 Sonuç: Saldırgan tarayıcıyı atlatıp Backend'e doğrudan script etiketi yollasa bile, sistem bunu &lt;script&gt; olarak işler. Tarayıcı bu kodu çalıştıramaz, sadece ekranda zararsız bir şekilde görüntüler.
-
-🏁 Değerlendirme ve Sonuç
+``` 
+## 🏁 Değerlendirme ve Sonuç
 Web güvenliğinde "İstemciye Asla Güvenme" (Never Trust the Client) kuralı esastır. Bu projede uygulanan çift katmanlı mimari sayesinde, XSS saldırı vektörü hem kullanıcı tarafında filtrelenmiş hem de sunucu tarafında kesin olarak bloklanmıştır.
