@@ -1,4 +1,3 @@
-cat << 'EOF' > PROJE_3_EXTRACTOR_RAPORU.md
 # 🔍 PROJE : Binary Analizi ve Hassas Veri Sızıntısı Tespiti (String Extractor)
 
 **Tarih:** Nisan 2026  
