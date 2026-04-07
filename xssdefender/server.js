@@ -75,5 +75,5 @@ app.post('/submit', xssSanitizerMiddleware, (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(\`[INFO] ISU-Sec Sunucusu port \${PORT} üzerinde aktif.\`);
+    console.log(`[INFO] ISU-Sec Sunucusu port${PORT} üzerinde aktif.`);
 });
