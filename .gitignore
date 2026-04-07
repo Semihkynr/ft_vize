@@ -1,0 +1,19 @@
+# Node.js
+xssdefender/node_modules/
+xssdefender/npm-debug.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Güvenlik & Çevresel Değişkenler
+.env
+.env.local
+*.pem
+
+# Binary / Tersine Mühendislik Hedefleri (İz bırakmama politikası)
+string_extraction/suspect_app
+*.exe
+*.out
+*.dll

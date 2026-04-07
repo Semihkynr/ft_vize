@@ -1,39 +1,48 @@
 const express = require('express');
+const helmet = require('helmet'); // Defense in Depth katmanı eklendi
+
 const app = express();
 
+// 1. KATMAN: HTTP Header Güvenliği (Sniffing ve XSS sömürüsünü zorlaştırır)
+app.use(helmet()); 
 app.use(express.urlencoded({ extended: true }));
 
-// --- BACKEND SANITIZATION (ENTITY ESCAPING) FONKSİYONU ---
-// Kurşun geçirmez zırhımız: Tehlikeli karakterleri zararsız HTML kodlarına dönüştürür
-function escapeHtml(unsafeString) {
-    if (!unsafeString) return "";
-    return unsafeString
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
-}
+/**
+ * Entity Escaping Middleware
+ * Gelen verideki tehlikeli karakterleri HTML Entity karşılıklarına dönüştürür.
+ */
+const xssSanitizerMiddleware = (req, res, next) => {
+    if (req.body && req.body.comment) {
+        req.body.comment = req.body.comment
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+    next();
+};
+
+// --- ROUTELAR ---
 
 app.get('/', (req, res) => {
+    // Gerçek bir senaryoda bu yapı res.sendFile() ile ayrı bir .html dosyasından sunulmalıdır.
     res.send(`
         <html>
-        <head><title>Kayıt Formu</title></head>
+        <head><title>ISU-Sec Kayıt Formu</title></head>
         <body style="font-family: Arial; margin: 40px;">
-            <h2>Kullanıcı Yorum Formu (Tam Korumalı)</h2>
+            <h2>Kullanıcı Yorum Formu (Çift Katmanlı Koruma)</h2>
             <form id="commentForm">
                 <input type="text" id="userInput" name="comment" placeholder="Yorumunuzu yazın..." style="width: 300px; padding: 5px;">
                 <button type="submit" style="padding: 5px 15px;">Gönder</button>
             </form>
-
             <script>
-                // 1. KATMAN: Frontend Zırhı
+                // DOM Tabanlı İstemci Koruması (innerText kullanımı)
                 document.getElementById('commentForm').addEventListener('submit', function(e) {
                     e.preventDefault();
-                    
                     let rawInput = document.getElementById('userInput').value;
                     let div = document.createElement('div');
-                    div.innerText = rawInput;
+                    div.innerText = rawInput; 
                     let sanitizedInput = div.innerHTML;
 
                     fetch('/submit', {
@@ -49,26 +58,22 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. KATMAN: Backend Zırhı (Asıl Güvenlik Duvarı)
-app.post('/submit', (req, res) => {
-    const rawComment = req.body.comment;
+// 2. KATMAN: Backend XSS Temizliği (Middleware Devrede)
+app.post('/submit', xssSanitizerMiddleware, (req, res) => {
+    const safeComment = req.body.comment; // Middleware tarafından temizlendi
     
-    // Gelen veriyi ekrana basmadan veya veritabanına kaydetmeden ÖNCE temizliyoruz!
-    const safeComment = escapeHtml(rawComment);
-    
-    console.log("Backend'e Ulaşan Ham Veri:", rawComment);
-    console.log("Ekrana Basılan Güvenli Veri:", safeComment);
+    console.log("[LOG] Ekrana Basılan Güvenli Veri:", safeComment);
 
     res.send(`
         <h3 style="color: green;">Yorumunuz güvenle eklendi:</h3>
-        <div style="border: 1px solid #ccc; padding: 10px; width: 300px;">
+        <div style="border: 1px solid #ccc; padding: 10px; width: 300px; background-color: #f9f9f9;">
             ${safeComment}
         </div>
-        <br>
-        <a href="/">Geri Dön</a>
+        <br><a href="/">Geri Dön</a>
     `);
 });
 
-app.listen(3000, () => {
-    console.log('Tam Korumalı Sunucu http://localhost:3000 adresinde çalışıyor...');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(\`[INFO] ISU-Sec Sunucusu port \${PORT} üzerinde aktif.\`);
 });

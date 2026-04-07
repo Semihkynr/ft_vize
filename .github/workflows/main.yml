@@ -1,0 +1,39 @@
+name: ISU-Sec Auto Build & Audit
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js (XSS Defender)
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: |
+        cd xssdefender
+        npm ci
+
+    - name: Run NPM Security Audit
+      run: |
+        cd xssdefender
+        npm run audit
+
+    - name: Setup Python (String Extractor)
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Syntax Check Python Scripts
+      run: |
+        cd string_extraction
+        python -m py_compile extractor.py

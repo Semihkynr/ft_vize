@@ -1,5 +1,7 @@
 import re
 import sys
+import os
+from typing import List, Dict
 
 # Terminal Renkleri
 CYAN = '\033[96m'
@@ -7,41 +9,46 @@ RED = '\033[91m'
 GREEN = '\033[92m'
 RESET = '\033[0m'
 
-def extract_strings(file_path):
-    print(f"{CYAN}[INFO] Analiz Başlatılıyor: {file_path}{RESET}\n")
+PATTERNS: Dict[str, bytes] = {
+    "API_KEY": rb"API_KEY=[\w-]+",
+    "URL_C2": rb"https?://[\w./-]+",
+    "PASSWORD": rb"PASSWORD=[\w!@#$%^&*]+"
+}
+
+def read_binary_file(file_path: str) -> bytes:
+    """Dosyayı binary formatta güvenle okur."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"[HATA] Dosya bulunamadı: {file_path}")
     
-    try:
-        with open(file_path, "rb") as f:
-            data = f.read()
-    except FileNotFoundError:
-        print(f"{RED}[HATA] Dosya bulunamadı.{RESET}")
-        return
+    with open(file_path, "rb") as f:
+        return f.read()
 
-    # 1. Aşama: Dosyadaki en az 4 karakter uzunluğundaki tüm okunabilir metinleri bul
-    # (Strings komutu mantığı: ASCII karakterleri yakalar)
-    readable_strings = re.findall(rb"[ -~]{4,}", data)
-
-    # 2. Aşama: Yakalanan metinlerin içinde hassas kelimeleri tara
-    findings = []
-    patterns = {
-        "API KEY": rb"API_KEY=[\w-]+",
-        "URL/C2": rb"https?://[\w./-]+",
-        "PASSWORD": rb"PASSWORD=[\w!@#$%^&*]+"
-    }
+def scan_sensitive_data(data: bytes) -> bool:
+    """Okunabilir bytelar içerisinde regex tabanlı imza avcılığı yapar."""
+    readable_strings: List[bytes] = re.findall(rb"[ -~]{4,}", data)
+    found_any: bool = False
 
     print(f"{CYAN}--- TESPİT EDİLEN HASSAS VERİLER ---{RESET}")
-    found_any = False
     for s in readable_strings:
-        for label, pattern in patterns.items():
+        for label, pattern in PATTERNS.items():
             if re.search(pattern, s):
-                print(f"{GREEN}[+] {label} BULUNDU:{RESET} {s.decode('utf-8', errors='ignore')}")
+                decoded_str = s.decode('utf-8', errors='ignore')
+                print(f"{GREEN}[+] {label} BULUNDU:{RESET} {decoded_str}")
                 found_any = True
-    
-    if not found_any:
-        print(f"{RED}[!] Kritik bir string bulunamadı.{RESET}")
+                
+    return found_any
+
+def main(file_path: str) -> None:
+    print(f"{CYAN}[INFO] Statik Analiz Başlatılıyor: {file_path}{RESET}\n")
+    try:
+        data = read_binary_file(file_path)
+        if not scan_sensitive_data(data):
+            print(f"{RED}[!] Kritik bir string bulunamadı.{RESET}")
+    except Exception as e:
+        print(f"{RED}{e}{RESET}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print(f"Kullanım: python3 extractor.py <dosya_adı>")
-    else:
-        extract_strings(sys.argv[1])
+        print("Kullanım: python3 extractor.py <dosya_adı>")
+        sys.exit(1)
+    main(sys.argv[1])
